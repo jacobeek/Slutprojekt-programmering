@@ -156,6 +156,10 @@ class Game:
         self.enemy_group.empty()
         self.bullet_group.empty()
         self.start_time = pygame.time.get_ticks()
+        self.player_sprite = Player(self.enemy_group)
+        self.player = pygame.sprite.GroupSingle(self.player_sprite)
+        self.gun_sprite = Gun(self.player_sprite)
+        self.gun = pygame.sprite.GroupSingle(self.gun_sprite)
     # -------------------- main loop --------------------
 
     def run(self):
@@ -174,6 +178,49 @@ class Game:
         if now - 50 >= self.last_action_time:
             self.last_action_time = pygame.time.get_ticks()
             return True
+    
+    def _handle_main_menu_selection(self):
+        """Handle main menu item selection"""
+        selected = self.main_menu.selected_index
+        if selected == 0:
+            self.game_state = "playing"
+            self.reset_game()
+        elif selected == 3:
+            pygame.quit()
+            exit()
+        # indices 1, 2: not implemented yet
+    
+    def _handle_pause_menu_selection(self):
+        """Handle pause menu item selection"""
+        selected = self.pause_menu.selected_index
+        if selected == 0:
+            self.game_state = "playing"
+        elif selected == 1:
+            self.game_state = "menu"
+            self.menu_state = "main_menu"
+        elif selected == 3:
+            pygame.quit()
+            exit()
+        # index 2: save game not implemented
+    
+    def _handle_menu_input(self, event):
+        """Handle menu navigation and selection"""
+        if event.type != pygame.KEYDOWN:
+            return
+        
+        if self.menu_state == "main_menu":
+            menu = self.main_menu
+            if event.key in (pygame.K_UP, pygame.K_DOWN):
+                menu.move_selection()
+            elif event.key == pygame.K_RETURN and self.can_trigger_action():
+                self._handle_main_menu_selection()
+        
+        elif self.menu_state == "pause_menu":
+            menu = self.pause_menu
+            if event.key in (pygame.K_UP, pygame.K_DOWN):
+                menu.move_selection()
+            elif event.key == pygame.K_RETURN and self.can_trigger_action():
+                self._handle_pause_menu_selection()
         
     # -------------------- event handling --------------------
 
@@ -183,82 +230,38 @@ class Game:
                 pygame.quit()
                 exit()
             
-            
-            
-            
-            #pause menu
+            # Handle ESC key for pause/resume
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 if self.can_trigger_action():
-                    if self.game_state == "playing": 
+                    if self.game_state == "playing":
                         self.menu_state = "pause_menu"
                         self.game_state = "menu"
-                    else: self.game_state = "playing"
-
+                    elif self.game_state == "menu":
+                        self.game_state = "playing"
             
-            #main menu
-            if self.menu_state == "main_menu" and event.type == pygame.KEYDOWN:
-                if self.can_trigger_action():
-                    self.main_menu.move_selection()
-                    if event.key == pygame.K_RETURN:
-                        if self.main_menu.selected_index == 0: 
-                            self.game_state = "playing"
-                            self.reset_game()
-                        if self.main_menu.selected_index == 1:
-                            pass # options menu not implemented 
-                        if self.main_menu.selected_index == 2:
-                            pass # credits menu not implemented
-                        
-                        if self.main_menu.selected_index == 3:
-                            pygame.quit()
-                            exit()
+            # Handle menu navigation
+            if self.game_state == "menu":
+                self._handle_menu_input(event)
             
-            
-                        
-            if self.menu_state == "pause_menu" and event.type == pygame.KEYDOWN:
-                if self.can_trigger_action():
-                    self.pause_menu.move_selection()
-                    if event.key == pygame.K_RETURN:
-                        if self.pause_menu.selected_index == 0: 
-                            self.game_state = "playing"
-                        if self.pause_menu.selected_index == 1:
-                            self.game_state = "menu"
-                        if self.pause_menu.selected_index == 2:
-                            pass # save game not implemented
-                        
-                        if self.pause_menu.selected_index == 3:
-                            pygame.quit()
-                            exit()
-
-                
-            if self.game_state == "start":
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    self.game_state = "playing"
-                    self.reset_game()
-
+            # Handle gameplay
             elif self.game_state == "playing":
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     self.shooting = True
-                if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                     self.shooting = False
-
+            
+            # Handle win/lose screens
             elif self.game_state in ("win", "lose"):
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_r:
                         self.game_state = "playing"
-
-                        # recreate player & gun
-                        self.player_sprite = Player(self.enemy_group)
-                        self.player = pygame.sprite.GroupSingle(self.player_sprite)
-
-                        self.gun_sprite = Gun(self.player_sprite)
-                        self.gun = pygame.sprite.GroupSingle(self.gun_sprite)
-
+                        
                         self.reset_game()
-
-                    if event.key == pygame.K_ESCAPE:
-                        pygame.quit()
-                        exit()
-
+                    elif event.key == pygame.K_ESCAPE:
+                        self.game_state = "menu"
+                        self.menu_state = "main_menu"
+                        self.reset_game
+                    
     # -------------------- update --------------------
 
     def update(self):
@@ -315,10 +318,10 @@ class Game:
             self.draw_lose_screen(self.screen)
 
         elif self.game_state == "menu":
-            self.draw_menu_screen(self.screen)
-
-        elif self.game_state == "pause_menu":
-            self.draw_pause_menu(self.screen)
+            if self.menu_state == "pause_menu":
+                self.draw_pause_menu(self.screen)
+            elif self.menu_state == "main_menu":
+                self.draw_menu_screen(self.screen)
 
 if __name__ == "__main__":
     game = Game()
