@@ -11,7 +11,7 @@ from gun import Gun
 from bullet import Bullet
 from enemy import Ghost, Fireball
 from game import GameStats
-from menu import MainMenu, PauseMenu
+from menu import MainMenu, PauseMenu, SaveMenu
 
 
 class Game:
@@ -49,6 +49,9 @@ class Game:
         # menu
         self.main_menu = MainMenu(self)
         self.pause_menu = PauseMenu(self)
+        self.save_menu = SaveMenu(self)
+        
+        
         # sounds
         self.bullet_shot_sound = pygame.mixer.Sound("sounds/gun_shot.mp3")
         self.bullet_shot_sound.set_volume(0.2)
@@ -90,6 +93,12 @@ class Game:
     
     def draw_pause_menu(self, screen):
         self.pause_menu.draw(screen)
+    
+    def draw_save_menu(self, screen):
+        self.save_menu.draw(screen)
+    
+    def draw_load_menu(self, screen):
+        pass
     
     def render_kill_counter(self, kills):
         text_kills_surf = self.text_font.render(f"Points: {kills}", False, "White")
@@ -196,8 +205,10 @@ class Game:
         if selected == 0:
             self.game_state = "playing"
         elif selected == 1:
-            self.game_state = "menu"
             self.menu_state = "main_menu"
+        elif selected == 2:
+            self.menu_state = "save_menu"
+        
         elif selected == 3:
             pygame.quit()
             exit()
@@ -210,17 +221,32 @@ class Game:
         
         if self.menu_state == "main_menu":
             menu = self.main_menu
-            if event.key in (pygame.K_UP, pygame.K_DOWN):
-                menu.move_selection()
+            if event.key == pygame.K_UP:
+                menu.move_selection(-1)
+            elif event.key == pygame.K_DOWN:
+                menu.move_selection(1)
             elif event.key == pygame.K_RETURN and self.can_trigger_action():
                 self._handle_main_menu_selection()
         
         elif self.menu_state == "pause_menu":
             menu = self.pause_menu
-            if event.key in (pygame.K_UP, pygame.K_DOWN):
-                menu.move_selection()
+            if event.key == pygame.K_UP:
+                menu.move_selection(-1)
+            elif event.key == pygame.K_DOWN:
+                menu.move_selection(1)
             elif event.key == pygame.K_RETURN and self.can_trigger_action():
                 self._handle_pause_menu_selection()
+        elif self.menu_state == "save_menu":
+            menu = self.save_menu
+            if event.key == pygame.K_UP:
+                menu.move_selection(-1)
+            elif event.key == pygame.K_DOWN:
+                menu.move_selection(1)
+            elif event.key == pygame.K_RETURN and self.can_trigger_action():
+                if menu.selected_index == 3:
+                    self.menu_state = "pause_menu"
+                    
+        
         
     # -------------------- event handling --------------------
 
@@ -295,8 +321,6 @@ class Game:
     # -------------------- draw --------------------
 
     def draw(self):
-        
-
         if self.game_state == "playing":
             self.screen.blit(self.background_surf, (0, 0))
 
@@ -322,7 +346,11 @@ class Game:
                 self.draw_pause_menu(self.screen)
             elif self.menu_state == "main_menu":
                 self.draw_menu_screen(self.screen)
-
+            elif self.menu_state == "save_menu":
+                self.draw_save_menu(self.screen)
+            elif self.menu_state == "load_menu":
+                pass  # not implemented yet
+            
 if __name__ == "__main__":
     game = Game()
     game.run()
