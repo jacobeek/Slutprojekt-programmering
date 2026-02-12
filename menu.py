@@ -123,7 +123,7 @@ class LoadMenu(Menu):
         self.selected_index = 0
         if self.items:
             self.items[self.selected_index].select()
-    
+        self.selected = True
     def refresh_saves(self):
         """Load available saves and populate menu items"""
         self.items = []

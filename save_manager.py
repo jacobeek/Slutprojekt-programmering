@@ -6,9 +6,11 @@ from datetime import datetime
 class SaveManager:
     """Handle game saving and loading"""
     
-    SAVE_DIR = "saves"
-    
     def __init__(self):
+        # Create saves directory relative to project folder
+        project_dir = os.path.dirname(os.path.abspath(__file__))
+        self.SAVE_DIR = os.path.join(project_dir, "saves")
+        
         # Create saves directory if it doesn't exist
         if not os.path.exists(self.SAVE_DIR):
             os.makedirs(self.SAVE_DIR)
