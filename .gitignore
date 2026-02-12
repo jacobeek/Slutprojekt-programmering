@@ -1,0 +1,55 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Distribution / build
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# Editor/IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Testing / analysis
+.pytest_cache/
+.mypy_cache/
+.pyrightcache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
+# Environment / secrets
+.env
+.env.*
+secrets.json
+
+# Databases
+*.sqlite3
+*.db
+
+# Editor temporary files
+*.swp
+*.swo
+
+# Game runtime / user data
+saves/
+save_*.json
+
+# Misc
+*.pyc
