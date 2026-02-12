@@ -2,8 +2,7 @@ import pygame
 from sys import exit
 from random import randint
 import math
-import csv
-
+import os
 
 from settings import *
 from player import Player
@@ -11,7 +10,8 @@ from gun import Gun
 from bullet import Bullet
 from enemy import Ghost, Fireball
 from game import GameStats
-from menu import MainMenu, PauseMenu, SaveMenu
+from menu import MainMenu, PauseMenu, SaveMenu, LoadMenu
+from save_manager import SaveManager
 
 
 class Game:
@@ -50,7 +50,10 @@ class Game:
         self.main_menu = MainMenu(self)
         self.pause_menu = PauseMenu(self)
         self.save_menu = SaveMenu(self)
+        self.load_menu = LoadMenu(self)
         
+        #save manager
+        self.save_manager = SaveManager()
         
         # sounds
         self.bullet_shot_sound = pygame.mixer.Sound("sounds/gun_shot.mp3")
@@ -98,7 +101,7 @@ class Game:
         self.save_menu.draw(screen)
     
     def draw_load_menu(self, screen):
-        pass
+        self.load_menu.draw(screen)
     
     def render_kill_counter(self, kills):
         text_kills_surf = self.text_font.render(f"Points: {kills}", False, "White")
@@ -169,6 +172,57 @@ class Game:
         self.player = pygame.sprite.GroupSingle(self.player_sprite)
         self.gun_sprite = Gun(self.player_sprite)
         self.gun = pygame.sprite.GroupSingle(self.gun_sprite)
+    # ---------------- save/load game state ---------------------
+    
+    def save_game(self):
+        """Save the current game state"""
+        return self.save_manager.save_game(self)
+    
+    def load_game(self, filepath):
+        """Load game state from a save file"""
+        save_data = self.save_manager.load_game(filepath)
+        if save_data:
+            self._apply_save_data(save_data)
+            return True
+        return False
+    
+    def _apply_save_data(self, save_data):
+        """Apply loaded save data to the game"""
+        # Reset game state
+        self.enemy_group.empty()
+        self.bullet_group.empty()
+        
+        # Restore player state
+        GameStats.kills = save_data.get("kills", 0)
+        self.player_sprite.health = save_data.get("health", 5)
+        self.player_sprite.max_health = save_data.get("max_health", 5)
+        
+        # Restore player position
+        player_data = save_data.get("player", {})
+        self.player_sprite.rect.centerx = player_data.get("x", window_x // 2)
+        self.player_sprite.rect.centery = player_data.get("y", window_y // 2)
+        
+        # Restore enemies
+        for enemy_data in save_data.get("enemies", []):
+            enemy_type = enemy_data.get("type")
+            x = enemy_data.get("x", 0)
+            y = enemy_data.get("y", 0)
+            
+            if enemy_type == "Ghost":
+                enemy = Ghost(self.player_sprite, self.gun_sprite)
+            elif enemy_type == "Fireball":
+                enemy = Fireball(self.player_sprite, self.gun_sprite)
+            else:
+                continue
+            
+            enemy.rect.centerx = x
+            enemy.rect.centery = y
+            self.enemy_group.add(enemy)
+        
+        # Adjust start time based on saved game time
+        saved_time = save_data.get("time", 0)
+        self.start_time = pygame.time.get_ticks() - (saved_time * 1000)
+    
     # -------------------- main loop --------------------
 
     def run(self):
@@ -194,6 +248,13 @@ class Game:
         if selected == 0:
             self.game_state = "playing"
             self.reset_game()
+        elif selected == 1:
+            # Load Game - refresh saves before showing menu
+            self.load_menu.refresh_saves()
+            self.menu_state = "load_menu"
+        elif selected == 2:
+            # Settings not implemented yet
+            pass
         elif selected == 3:
             pygame.quit()
             exit()
@@ -205,14 +266,12 @@ class Game:
         if selected == 0:
             self.game_state = "playing"
         elif selected == 1:
-            self.menu_state = "main_menu"
-        elif selected == 2:
             self.menu_state = "save_menu"
-        
+        elif selected == 2:
+            self.menu_state = "main_menu"
         elif selected == 3:
             pygame.quit()
             exit()
-        # index 2: save game not implemented
     
     def _handle_menu_input(self, event):
         """Handle menu navigation and selection"""
@@ -243,9 +302,30 @@ class Game:
             elif event.key == pygame.K_DOWN:
                 menu.move_selection(1)
             elif event.key == pygame.K_RETURN and self.can_trigger_action():
-                if menu.selected_index == 3:
+                if menu.selected_index == 0:  # Save Game
+                    self.save_game()
+                    print("Game saved!")
                     self.menu_state = "pause_menu"
-                    
+                elif menu.selected_index == 1:  # Back
+                    self.menu_state = "pause_menu"
+        
+        elif self.menu_state == "load_menu":
+            menu = self.load_menu
+            if event.key == pygame.K_UP:
+                menu.move_selection(-1)
+            elif event.key == pygame.K_DOWN:
+                menu.move_selection(1)
+            elif event.key == pygame.K_RETURN and self.can_trigger_action():
+                selected_save = menu.get_selected_save()
+                if selected_save:  # A save file is selected
+                    if self.load_game(selected_save):
+                        print(f"Game loaded from {selected_save}")
+                        self.game_state = "playing"
+                        self.menu_state = "main_menu"
+                    else:
+                        print("Failed to load game")
+                else:  # Back option selected
+                    self.menu_state = "main_menu"
         
         
     # -------------------- event handling --------------------
@@ -349,7 +429,7 @@ class Game:
             elif self.menu_state == "save_menu":
                 self.draw_save_menu(self.screen)
             elif self.menu_state == "load_menu":
-                pass  # not implemented yet
+                self.draw_load_menu(self.screen)
             
 if __name__ == "__main__":
     game = Game()
